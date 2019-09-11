@@ -58,12 +58,15 @@ void errorCheck(FMOD_RESULT result);
 void releaseFMOD();
 bool initFMOD();
 
+int _release_counter = 0;
+
 void handleUserInput();
 
 void consoleUpdate();
 
 
 void errorCheck(FMOD_RESULT result) {
+	
 	if (result != FMOD_OK) {
 		wattron(_cs.win, A_STANDOUT);
 		wprintw(_cs.win, "FMOD error: %d", result);
@@ -86,6 +89,13 @@ bool initFMOD() {
 }
 
 void releaseFMOD() {
+
+	_release_counter++;
+	if (_release_counter >= 3) {
+		_sound = 0;
+		_system = 0;
+		exit(1);
+	}
 
 	if (_sound) {
 		_result = _sound->release();
@@ -144,11 +154,28 @@ int main() {
 
 
 		bool is_paused = false;
+		unsigned int pos;
+
+
 		if (_channel) {
 			//get is paused
 			_result = _channel->getPaused(&is_paused);
 			errorCheck(_result);
+			_result = _channel->getPosition(&pos, FMOD_TIMEUNIT_MS);
+			errorCheck(_result);
 		}
+
+		const int buffer_size = 255;
+		char name[buffer_size] = {'\0'};
+		unsigned int len;
+
+		if (_sound) {
+			_result = _sound->getName(name, buffer_size);
+			errorCheck(_result);
+			_result = _sound->getLength(&len, FMOD_TIMEUNIT_MS);
+			errorCheck(_result);
+		}
+
 
 		consoleUpdate();
 		handleUserInput();
@@ -159,6 +186,8 @@ int main() {
 		wprintw(_cs.win, "Press 1 to play/pause a sound.\n");
 		wprintw(_cs.win, "\n");
 		wprintw(_cs.win, "Press 'ESC' key to exit.\n");
+		wprintw(_cs.win, "Sound name: %s\n", name);
+		wprintw(_cs.win, "Position:%02d:%02d / %02d:%02d\n", pos / 1000 / 60, pos / 1000 % 60,len / 1000 / 60, len / 1000 % 60);
 		wprintw(_cs.win, "Is paused?: %s\n", (is_paused) ? "YES" : "NO");
 
 
