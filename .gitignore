@@ -6,7 +6,7 @@
 
 # Custom not at github
 common/
-
+*.mp3
 
 # User-specific files
 *.rsuser
