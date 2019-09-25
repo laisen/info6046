@@ -7,6 +7,9 @@
 # Custom not at github
 common/
 *.mp3
+vs_code/
+*.props
+
 
 # User-specific files
 *.rsuser
