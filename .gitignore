@@ -5,10 +5,9 @@
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
 # Custom not at github
-common/
+common/assets/media/
 *.mp3
 vs_code/
-*.props
 
 
 # User-specific files
