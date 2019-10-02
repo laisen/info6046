@@ -23,11 +23,11 @@
 #include <vector>
 #include <cstdio>
 
+
 #include <glad/glad.h>
 #include <GLFW\glfw3.h>
 
-#include <fmod.hpp>
-#include <fmod_errors.h>
+#include "common/src/audio/audio_item.h"
 
 
 #include <ft2build.h>
@@ -39,12 +39,17 @@ unsigned int _vertex_shader, _fragment_shader, _program;
 GLfloat _current_y_position = 0.0f;
 GLfloat _y_offset = 40.0f;
 char _text_buffer[512];
+std::vector<AudioItem> _vec_audio_items;
+std::vector<AudioItem>::iterator _it_selected_autio_item;
+
+
 
 //GLFW
 int _window_width = 640;
 int _window_height = 480;
 GLFWwindow* _main_window = NULL;
 
+//Free text
 FT_Library _ft;
 FT_Face _face;
 unsigned int _text_program;
@@ -52,6 +57,11 @@ unsigned int _uniform_tex;
 unsigned int _attribute_coord;
 unsigned int _dp_vbo;
 unsigned int _uniform_color;
+
+//FMOD
+FMOD::System* _system = 0;
+FMOD_RESULT _result = FMOD_OK;
+
 
 //=============================================================
 struct point {
@@ -69,10 +79,23 @@ bool init_gl();
 bool init_text();
 bool init_shaders();
 void render_text(const char* text);
+bool init_fmod();
+void release_fmod();
+bool load_audio_from_file();
+void step_settings(bool is_step_up);
+
+void error_check(FMOD_RESULT result) {
+	if (result != FMOD_OK) {
+		fprintf(stderr, "FMOD error: %s", FMOD_ErrorString(result));		
+		
+		exit(1);
+	}
+}
+
 
 static void error_callback(int error, const char* description)
 {
-	fprintf(stderr, "Error: %s\n", description);
+	fprintf(stderr, "Error: %s\n", description);	
 }
 
 
@@ -81,8 +104,74 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
 		glfwSetWindowShouldClose(window, GLFW_TRUE);
-	}	
+	}
+	if (key == GLFW_KEY_N && action == GLFW_PRESS) {
+		_it_selected_autio_item = (_it_selected_autio_item != (_vec_audio_items.end() - 1))? _it_selected_autio_item + 1: _vec_audio_items.begin();
+	}
+	if (key == GLFW_KEY_V && action == GLFW_PRESS) {
+		_it_selected_autio_item->selectedConfigSetting = VOLUME;
+	}
+	if (key == GLFW_KEY_P && action == GLFW_PRESS) {
+		_it_selected_autio_item->selectedConfigSetting = PITCH;
+	}
+	if (key == GLFW_KEY_B && action == GLFW_PRESS) {
+		_it_selected_autio_item->selectedConfigSetting = PAN;
+	}
+	if (key == GLFW_KEY_M && action == GLFW_PRESS) {
+		_it_selected_autio_item->selectedConfigSetting = PAUSE;
+	}
+	if (key == GLFW_KEY_C && action == GLFW_PRESS) {
+		_it_selected_autio_item->selectedConfigSetting = PLAYING;
+	}
+	if (key == GLFW_KEY_D && action == GLFW_PRESS) {
 		
+		//toggle bypass
+
+
+	}
+
+	//use up/down arrows to change
+	if (key == GLFW_KEY_UP && action == GLFW_PRESS) {
+		step_settings(true);
+
+	}
+	if (key == GLFW_KEY_DOWN && action == GLFW_PRESS) {
+		step_settings(false);
+	}
+			
+		
+}
+
+void step_settings(bool is_step_up){
+
+	float step_size = (is_step_up)?0.1f:-0.1f;
+
+	switch (_it_selected_autio_item->selectedConfigSetting)
+	{
+	
+	case PAUSE:
+		_result = _it_selected_autio_item->channel->getPaused(&_it_selected_autio_item->is_paused);
+		error_check(_result);
+		//just switch is paused
+		_result = _it_selected_autio_item->channel->setPaused(!_it_selected_autio_item->is_paused);
+		error_check(_result);
+
+		_result = _it_selected_autio_item->channel->getPaused(&_it_selected_autio_item->is_paused);
+		error_check(_result);
+		break;
+
+
+	default:
+		break;
+	}
+}
+
+
+void handle_audio_files() {
+	std::vector<AudioItem>::iterator it = _vec_audio_items.begin();
+	for (it; it != _vec_audio_items.end(); it++) {
+		render_text(it->get_info().c_str());
+	}
 }
 
 int main() {
@@ -98,6 +187,11 @@ int main() {
 	fprintf(stdout, "Init shaders...\n");
 	assert(init_shaders());
 
+	fprintf(stdout, "Init fmod...\n");
+	assert(init_fmod());
+
+	fprintf(stdout, "Loading audio files from config file...\n");
+	assert(load_audio_from_file());
 
 	//=======================================================================================
 	fprintf(stdout, "Ready ...!\n");	
@@ -114,24 +208,25 @@ int main() {
 
 		glUseProgram(_program);		
 
+		
 
 		render_text("=====================================================");
 		render_text("Media Fundamentals play sound...");
 		render_text("=====================================================");
 		render_text("Press ESC to Exit!");
 		render_text("");
-		render_text("String 1");
-		render_text("String 2");
-		render_text("String 3");
-		render_text("String 4");
-		render_text("String 5");
-		render_text("String 6");
-		render_text("String 7");
+
+		render_text("Selected audio item:");
+		render_text(_it_selected_autio_item->get_info().c_str());		
+		render_text(_it_selected_autio_item->get_selected_config_setting().c_str());
+		render_text("");
+		handle_audio_files();
+		
 		render_text("=====================================================");
 		//print numbers, strings using buffer
-		sprintf(_text_buffer, "i am a float %.02f", 2.15f);
-		render_text(_text_buffer);
-		render_text("=====================================================");
+		//sprintf(_text_buffer, "i am a float %.02f", 2.15f);
+		//render_text(_text_buffer);
+		//render_text("=====================================================");
 		
 
 
@@ -145,6 +240,7 @@ int main() {
 	glfwDestroyWindow(_main_window);
 	glfwTerminate();
 
+	release_fmod();
 	return 0;
 }
 
@@ -203,7 +299,7 @@ bool init_text() {
 		fprintf(stderr, "Unable to init text...\n");
 		return false;
 	}
-	if (FT_New_Face(_ft, "../common/assets/fonts/arial.ttf", 0, &_face)) {
+	if (FT_New_Face(_ft, "../../common/assets/fonts/arial.ttf", 0, &_face)) {
 		fprintf(stderr, "Unable to init text...\n");
 		return false;
 	}
@@ -231,7 +327,7 @@ bool init_shaders() {
 		return 1;
 	}
 	//--	
-	FILE* f = fopen("../common/src/shaders/simple_text.vert", "rb");
+	FILE* f = fopen("../../common/src/shaders/simple_text.vert", "rb");
 	long filesize = ftell(f);
 	fseek(f, 0, SEEK_END);
 	filesize = ftell(f);
@@ -241,7 +337,7 @@ bool init_shaders() {
 	fclose(f);
 	simple_text_vert[filesize] = 0;
 	//--
-	f = fopen("../common/src/shaders/simple_text.frag", "rb");
+	f = fopen("../../common/src/shaders/simple_text.frag", "rb");
 	fseek(f, 0, SEEK_END);
 	filesize = ftell(f);
 	fseek(f, 0, SEEK_SET);
@@ -376,3 +472,71 @@ void render_text(const char *text) {
 	_current_y_position = (_current_y_position > 800.0f) ? 30.0f : (_current_y_position + _y_offset);
 }
 
+bool init_fmod() {
+	//Create system
+	_result = FMOD::System_Create(&_system);
+	error_check(_result);
+	//Init system
+	_result = _system->init(32, FMOD_INIT_NORMAL, 0);
+	error_check(_result);
+	
+
+
+	return true;
+}
+
+void release_fmod() {
+
+
+
+	std::vector<AudioItem>::iterator it = _vec_audio_items.begin();
+	for (it; it != _vec_audio_items.end(); it++) {
+		
+		if (it->sound) {
+			_result = it->sound->release();
+			error_check(_result);
+		}
+	}
+
+
+	
+	if (_system) {
+		_system->close();
+		_system->release();
+	}
+
+
+}
+
+bool load_audio_from_file() {
+
+	std::ifstream input_file;
+	input_file.open("../../common/assets/config/audio_files.txt");
+	if (!input_file) {
+		fprintf(stderr, "Unable to open audio_files.txt\n");
+		return false;
+	}
+	std::string line;
+	
+	
+
+	while (std::getline(input_file, line))
+	{
+		if (line.length() > 0) {
+			AudioItem ai(_system);
+			ai.path = line.c_str();
+			ai.create_and_play_sound(true, true);
+			_vec_audio_items.push_back(ai);
+		}
+	}
+
+	_it_selected_autio_item = _vec_audio_items.begin();
+	
+	
+
+
+
+	//TODO: EXERCISE IN CLASS USE A CHANNEL GROUP, TO MUTE, AND ADD A DSP INSTEAD.
+
+	return true;
+}

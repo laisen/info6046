@@ -1,5 +1,5 @@
 #==================================================================================================================================================================
-#|Copyright 2018 Oscar Lara	- scarlara@hotmail.com																												   |
+#|Copyright 2019 Oscar Lara	- scarlara@hotmail.com																												   |
 #|																																								   |
 #|See individual libraries separate legal notices																												   |
 #|																																								   |
