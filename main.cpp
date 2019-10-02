@@ -61,7 +61,9 @@ unsigned int _uniform_color;
 //FMOD
 FMOD::System* _system = 0;
 FMOD_RESULT _result = FMOD_OK;
-
+FMOD::DSP* _dsp_echo = 0;
+FMOD::DSP* _dsp_tremolo = 0;
+bool _is_dsp_on = false;
 
 //=============================================================
 struct point {
@@ -125,7 +127,18 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 	}
 	if (key == GLFW_KEY_D && action == GLFW_PRESS) {
 		
+		//get bypass value
+		//_result = _dsp_echo->getBypass(&_is_dsp_on);
+		//error_check(_result);
 		//toggle bypass
+		_is_dsp_on = !_is_dsp_on;
+		//set new value
+		_result = _dsp_echo->setBypass(_is_dsp_on);
+		error_check(_result);
+
+		_result = _dsp_tremolo->setBypass(_is_dsp_on);
+		error_check(_result);
+
 
 
 	}
@@ -148,7 +161,18 @@ void step_settings(bool is_step_up){
 
 	switch (_it_selected_autio_item->selectedConfigSetting)
 	{
-	
+	case VOLUME:
+		//get current volume
+		_result = _it_selected_autio_item->channel->getVolume(&_it_selected_autio_item->volume);
+		error_check(_result);
+		//clamp volume
+		_it_selected_autio_item->volume = (_it_selected_autio_item->volume >= 1.0f) ? 1.0f : _it_selected_autio_item->volume + step_size;
+		if (!is_step_up)
+			_it_selected_autio_item->volume = (_it_selected_autio_item->volume <= 0.0f) ? 0.0f : _it_selected_autio_item->volume + step_size;
+		//set new volume
+		_result = _it_selected_autio_item->channel->setVolume(_it_selected_autio_item->volume);
+		error_check(_result);
+		break;
 	case PAUSE:
 		_result = _it_selected_autio_item->channel->getPaused(&_it_selected_autio_item->is_paused);
 		error_check(_result);
@@ -215,7 +239,9 @@ int main() {
 		render_text("=====================================================");
 		render_text("Press ESC to Exit!");
 		render_text("");
-
+		sprintf(_text_buffer, "Is DSP active? %s", (_is_dsp_on) ? "NO" : "YES");
+		render_text(_text_buffer);
+		render_text("");
 		render_text("Selected audio item:");
 		render_text(_it_selected_autio_item->get_info().c_str());		
 		render_text(_it_selected_autio_item->get_selected_config_setting().c_str());
@@ -299,7 +325,7 @@ bool init_text() {
 		fprintf(stderr, "Unable to init text...\n");
 		return false;
 	}
-	if (FT_New_Face(_ft, "../../common/assets/fonts/arial.ttf", 0, &_face)) {
+	if (FT_New_Face(_ft, "../common/assets/fonts/arial.ttf", 0, &_face)) {
 		fprintf(stderr, "Unable to init text...\n");
 		return false;
 	}
@@ -327,7 +353,7 @@ bool init_shaders() {
 		return 1;
 	}
 	//--	
-	FILE* f = fopen("../../common/src/shaders/simple_text.vert", "rb");
+	FILE* f = fopen("../common/src/shaders/simple_text.vert", "rb");
 	long filesize = ftell(f);
 	fseek(f, 0, SEEK_END);
 	filesize = ftell(f);
@@ -337,7 +363,7 @@ bool init_shaders() {
 	fclose(f);
 	simple_text_vert[filesize] = 0;
 	//--
-	f = fopen("../../common/src/shaders/simple_text.frag", "rb");
+	f = fopen("../common/src/shaders/simple_text.frag", "rb");
 	fseek(f, 0, SEEK_END);
 	filesize = ftell(f);
 	fseek(f, 0, SEEK_SET);
@@ -480,7 +506,13 @@ bool init_fmod() {
 	_result = _system->init(32, FMOD_INIT_NORMAL, 0);
 	error_check(_result);
 	
+	//create echo dsp
+	_result = _system->createDSPByType(FMOD_DSP_TYPE_ECHO, &_dsp_echo);
+	error_check(_result);
 
+	//create tremolo dsp
+	_result = _system->createDSPByType(FMOD_DSP_TYPE_TREMOLO, &_dsp_tremolo);
+	error_check(_result);
 
 	return true;
 }
@@ -498,6 +530,15 @@ void release_fmod() {
 		}
 	}
 
+	//release dsp
+	if (_dsp_echo) {
+		_result = _dsp_echo->release();
+		error_check(_result);
+	}
+	if (_dsp_tremolo) {
+		_result = _dsp_tremolo->release();
+		error_check(_result);
+	}
 
 	
 	if (_system) {
@@ -511,7 +552,7 @@ void release_fmod() {
 bool load_audio_from_file() {
 
 	std::ifstream input_file;
-	input_file.open("../../common/assets/config/audio_files.txt");
+	input_file.open("../common/assets/config/audio_files.txt");
 	if (!input_file) {
 		fprintf(stderr, "Unable to open audio_files.txt\n");
 		return false;
@@ -532,7 +573,12 @@ bool load_audio_from_file() {
 
 	_it_selected_autio_item = _vec_audio_items.begin();
 	
-	
+	//add a dsp to sound at index 0
+	_result = _vec_audio_items.at(0).channel->addDSP(0, _dsp_echo);
+	error_check(_result);
+	//add dsp to sound at index 1
+	_result = _vec_audio_items.at(1).channel->addDSP(0, _dsp_tremolo);
+	error_check(_result);
 
 
 
