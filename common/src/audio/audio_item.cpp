@@ -85,3 +85,33 @@ std::string AudioItem::get_selected_config_setting()
 	return selected_confoig_setting;
 }
 
+bool AudioItem::create_and_play_3d_sound(bool start_paused, float x_position)
+{
+	//Create 3d sound
+	this->_result = this->_system->createSound(this->path.c_str(), FMOD_3D, 0, &this->sound);
+	error_check();
+
+	//set loop mode
+	this->_result = this->sound->setMode(FMOD_LOOP_NORMAL);
+	error_check();
+
+	//get name
+	this->_result = this->sound->getName(this->name, BUFFER_SIZE);
+	error_check();
+
+	//play the sound
+	this->_result = this->_system->playSound(this->sound, this->channel_group, start_paused, &this->channel);
+	error_check();
+
+	//set 3d attributes.
+	FMOD_VECTOR position = { x_position, 0.0f, 0.0f };
+	FMOD_VECTOR velocity = {0.0f, 0.0f, 0.0f};
+
+	this->_result = this->channel->set3DAttributes(&position, &velocity);
+	error_check();
+
+	return true;
+}
+
+
+

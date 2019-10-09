@@ -28,7 +28,7 @@
 #include <GLFW\glfw3.h>
 
 #include "common/src/audio/audio_item.h"
-
+#include "common/src/audio/audio_listener.h"
 
 #include <ft2build.h>
 #include FT_FREETYPE_H  
@@ -42,7 +42,7 @@ char _text_buffer[512];
 std::vector<AudioItem> _vec_audio_items;
 std::vector<AudioItem>::iterator _it_selected_autio_item;
 
-
+AudioListener* _al;
 
 //GLFW
 int _window_width = 640;
@@ -152,7 +152,13 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 		step_settings(false);
 	}
 			
-		
+	//change listener position X axis
+	if (key == GLFW_KEY_LEFT) {
+		_al->step_left();
+	}
+	if (key == GLFW_KEY_RIGHT) {
+		_al->step_right();
+	}
 }
 
 void step_settings(bool is_step_up){
@@ -232,7 +238,10 @@ int main() {
 
 		//glUseProgram(_program);		
 
-		
+		_al->dance_over_x(glfwGetTime());
+
+		_result = _system->set3DListenerAttributes(0, &_al->position, &_al->velocity, &_al->forward, &_al->up);
+		error_check(_result);
 
 		render_text("=====================================================");
 		render_text("Media Fundamentals play sound...");
@@ -246,6 +255,8 @@ int main() {
 		render_text(_it_selected_autio_item->get_info().c_str());		
 		render_text(_it_selected_autio_item->get_selected_config_setting().c_str());
 		render_text("");
+		render_text("Listener Position:");
+		render_text(_al->get_position_info().c_str());
 		handle_audio_files();
 		
 		render_text("=====================================================");
@@ -254,7 +265,8 @@ int main() {
 		//render_text(_text_buffer);
 		//render_text("=====================================================");
 		
-
+		_result = _system->update();
+		error_check(_result);
 
 		glfwSwapBuffers(_main_window);
 		glfwPollEvents();
@@ -514,6 +526,12 @@ bool init_fmod() {
 	_result = _system->createDSPByType(FMOD_DSP_TYPE_TREMOLO, &_dsp_tremolo);
 	error_check(_result);
 
+	_result = _system->set3DSettings(1.0f, 1.0f, 1.0f);
+	error_check(_result);
+
+	//initialize our audio listener
+	_al = new AudioListener(_system);
+
 	return true;
 }
 
@@ -560,25 +578,33 @@ bool load_audio_from_file() {
 	std::string line;
 	
 	
+	float x_position = -15.0f;
 
 	while (std::getline(input_file, line))
 	{
 		if (line.length() > 0) {
 			AudioItem ai(_system);
 			ai.path = line.c_str();
-			ai.create_and_play_sound(true, true);
+			//ai.create_and_play_sound(true, true);
+			ai.create_and_play_3d_sound(false, x_position);
 			_vec_audio_items.push_back(ai);
+
+			x_position *= -1.0f;
 		}
 	}
 
 	_it_selected_autio_item = _vec_audio_items.begin();
 	
-	//add a dsp to sound at index 0
-	_result = _vec_audio_items.at(0).channel->addDSP(0, _dsp_echo);
+	//ff sound at index 0 by 6 seconds or change the position
+	_result = _vec_audio_items.at(0).channel->setPosition(6000, FMOD_TIMEUNIT_MS);
 	error_check(_result);
-	//add dsp to sound at index 1
-	_result = _vec_audio_items.at(1).channel->addDSP(0, _dsp_tremolo);
-	error_check(_result);
+
+	////add a dsp to sound at index 0
+	//_result = _vec_audio_items.at(0).channel->addDSP(0, _dsp_echo);
+	//error_check(_result);
+	////add dsp to sound at index 1
+	//_result = _vec_audio_items.at(1).channel->addDSP(0, _dsp_tremolo);
+	//error_check(_result);
 
 
 

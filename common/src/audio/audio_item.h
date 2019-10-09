@@ -45,7 +45,8 @@ public:
 	bool create_and_play_sound(bool is_streamed_sound, bool start_paused);
 	std::string get_info();
 	std::string get_selected_config_setting();
-
+	bool create_and_play_3d_sound(bool start_paused, float x_position);
+	
 private:
 	FMOD_RESULT _result;	
 	FMOD::System* _system;
