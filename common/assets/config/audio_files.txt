@@ -1,3 +1,2 @@
-../common/assets/audio/Kalimba.mp3
-../common/assets/audio/Maid_with_the_Flaxen_Hair.mp3
-../common/assets/audio/Sleep_Away.mp3
+../common/assets/audio/bump_of_chicken_helloworld.mp3
+../common/assets/audio/swish.wav

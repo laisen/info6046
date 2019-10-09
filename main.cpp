@@ -230,7 +230,7 @@ int main() {
 		// Clear the screen
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		glUseProgram(_program);		
+		//glUseProgram(_program);		
 
 		
 
@@ -347,11 +347,11 @@ bool init_shaders() {
 //Shaders
 	int params = -1;
 
-	glGetProgramiv(_program, GL_LINK_STATUS, &params);
-	if (!params) {
-		fprintf(stderr, "Unable to link shader program");
-		return 1;
-	}
+	//glGetProgramiv(_program, GL_LINK_STATUS, &params);
+	//if (!params) {
+	//	fprintf(stderr, "Unable to link shader program");
+	//	return 1;
+	//}
 	//--	
 	FILE* f = fopen("../common/src/shaders/simple_text.vert", "rb");
 	long filesize = ftell(f);
@@ -406,7 +406,7 @@ bool init_shaders() {
 	_uniform_color = glGetUniformLocation(_text_program, "color");
 	glGenBuffers(1, &_dp_vbo);
 
-	glUseProgram(_program);
+	//glUseProgram(_program);
 	return true;
 }
 
