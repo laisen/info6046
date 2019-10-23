@@ -9,6 +9,9 @@ common/assets/media/
 common/assets/audio/
 *.mp3
 vs_code/
+vs_code_msi/
+vs_project_msi/
+vs_project_lh/
 
 
 # User-specific files

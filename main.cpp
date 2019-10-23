@@ -27,22 +27,27 @@
 #include <glad/glad.h>
 #include <GLFW\glfw3.h>
 
-#include "common/src/audio/audio_item.h"
-#include "common/src/audio/audio_listener.h"
+#include <fmod.hpp>
+#include <fmod_errors.h>
 
 #include <ft2build.h>
 #include FT_FREETYPE_H  
 
+//TODO: 1 Define constants
+#define INPUT_DEVICE_INDEX 0
 
 //Globals
 unsigned int _vertex_shader, _fragment_shader, _program;
 GLfloat _current_y_position = 0.0f;
 GLfloat _y_offset = 40.0f;
 char _text_buffer[512];
-std::vector<AudioItem> _vec_audio_items;
-std::vector<AudioItem>::iterator _it_selected_autio_item;
 
-AudioListener* _al;
+
+
+
+//TODO: 2 GLOBALS
+
+
 
 //GLFW
 int _window_width = 640;
@@ -83,13 +88,14 @@ bool init_shaders();
 void render_text(const char* text);
 bool init_fmod();
 void release_fmod();
-bool load_audio_from_file();
-void step_settings(bool is_step_up);
+
+
+//TODO: 4 handle recorded sound
 
 void error_check(FMOD_RESULT result) {
 	if (result != FMOD_OK) {
 		fprintf(stderr, "FMOD error: %s", FMOD_ErrorString(result));		
-		
+		release_fmod();
 		exit(1);
 	}
 }
@@ -107,102 +113,19 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
 		glfwSetWindowShouldClose(window, GLFW_TRUE);
 	}
-	if (key == GLFW_KEY_N && action == GLFW_PRESS) {
-		_it_selected_autio_item = (_it_selected_autio_item != (_vec_audio_items.end() - 1))? _it_selected_autio_item + 1: _vec_audio_items.begin();
-	}
-	if (key == GLFW_KEY_V && action == GLFW_PRESS) {
-		_it_selected_autio_item->selectedConfigSetting = VOLUME;
-	}
-	if (key == GLFW_KEY_P && action == GLFW_PRESS) {
-		_it_selected_autio_item->selectedConfigSetting = PITCH;
-	}
-	if (key == GLFW_KEY_B && action == GLFW_PRESS) {
-		_it_selected_autio_item->selectedConfigSetting = PAN;
-	}
-	if (key == GLFW_KEY_M && action == GLFW_PRESS) {
-		_it_selected_autio_item->selectedConfigSetting = PAUSE;
-	}
-	if (key == GLFW_KEY_C && action == GLFW_PRESS) {
-		_it_selected_autio_item->selectedConfigSetting = PLAYING;
-	}
-	if (key == GLFW_KEY_D && action == GLFW_PRESS) {
-		
-		//get bypass value
-		//_result = _dsp_echo->getBypass(&_is_dsp_on);
-		//error_check(_result);
-		//toggle bypass
-		_is_dsp_on = !_is_dsp_on;
-		//set new value
-		_result = _dsp_echo->setBypass(_is_dsp_on);
-		error_check(_result);
 
-		_result = _dsp_tremolo->setBypass(_is_dsp_on);
-		error_check(_result);
+	//TODO: 6 INCREATE/DECREASE PLAYBACK RATE
 
-
-
-	}
-
-	//use up/down arrows to change
-	if (key == GLFW_KEY_UP && action == GLFW_PRESS) {
-		step_settings(true);
-
-	}
-	if (key == GLFW_KEY_DOWN && action == GLFW_PRESS) {
-		step_settings(false);
-	}
 			
-	//change listener position X axis
-	if (key == GLFW_KEY_LEFT) {
-		_al->step_left();
-	}
-	if (key == GLFW_KEY_RIGHT) {
-		_al->step_right();
-	}
+
+
 }
 
-void step_settings(bool is_step_up){
-
-	float step_size = (is_step_up)?0.1f:-0.1f;
-
-	switch (_it_selected_autio_item->selectedConfigSetting)
-	{
-	case VOLUME:
-		//get current volume
-		_result = _it_selected_autio_item->channel->getVolume(&_it_selected_autio_item->volume);
-		error_check(_result);
-		//clamp volume
-		_it_selected_autio_item->volume = (_it_selected_autio_item->volume >= 1.0f) ? 1.0f : _it_selected_autio_item->volume + step_size;
-		if (!is_step_up)
-			_it_selected_autio_item->volume = (_it_selected_autio_item->volume <= 0.0f) ? 0.0f : _it_selected_autio_item->volume + step_size;
-		//set new volume
-		_result = _it_selected_autio_item->channel->setVolume(_it_selected_autio_item->volume);
-		error_check(_result);
-		break;
-	case PAUSE:
-		_result = _it_selected_autio_item->channel->getPaused(&_it_selected_autio_item->is_paused);
-		error_check(_result);
-		//just switch is paused
-		_result = _it_selected_autio_item->channel->setPaused(!_it_selected_autio_item->is_paused);
-		error_check(_result);
-
-		_result = _it_selected_autio_item->channel->getPaused(&_it_selected_autio_item->is_paused);
-		error_check(_result);
-		break;
+//TODO: 4  DEFINE handle_recording_sound
 
 
-	default:
-		break;
-	}
-}
 
 
-void handle_audio_files() {
-	std::vector<AudioItem>::iterator it = _vec_audio_items.begin();
-	for (it; it != _vec_audio_items.end(); it++) {
-		render_text(it->get_info().c_str());
-	}
-}
 
 int main() {
 
@@ -220,8 +143,7 @@ int main() {
 	fprintf(stdout, "Init fmod...\n");
 	assert(init_fmod());
 
-	fprintf(stdout, "Loading audio files from config file...\n");
-	assert(load_audio_from_file());
+
 
 	//=======================================================================================
 	fprintf(stdout, "Ready ...!\n");	
@@ -236,35 +158,21 @@ int main() {
 		// Clear the screen
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		//glUseProgram(_program);		
 
-		_al->dance_over_x(glfwGetTime());
-
-		_result = _system->set3DListenerAttributes(0, &_al->position, &_al->velocity, &_al->forward, &_al->up);
-		error_check(_result);
 
 		render_text("=====================================================");
-		render_text("Media Fundamentals play sound...");
+		render_text("Media Fundamentals record sound...");
 		render_text("=====================================================");
 		render_text("Press ESC to Exit!");
 		render_text("");
-		sprintf(_text_buffer, "Is DSP active? %s", (_is_dsp_on) ? "NO" : "YES");
-		render_text(_text_buffer);
-		render_text("");
-		render_text("Selected audio item:");
-		render_text(_it_selected_autio_item->get_info().c_str());		
-		render_text(_it_selected_autio_item->get_selected_config_setting().c_str());
-		render_text("");
-		render_text("Listener Position:");
-		render_text(_al->get_position_info().c_str());
-		handle_audio_files();
-		
+		//TODO:  show is recording
+
 		render_text("=====================================================");
-		//print numbers, strings using buffer
-		//sprintf(_text_buffer, "i am a float %.02f", 2.15f);
-		//render_text(_text_buffer);
-		//render_text("=====================================================");
+
 		
+		//TODO: 5 call handle_recording_sound
+
+
 		_result = _system->update();
 		error_check(_result);
 
@@ -514,8 +422,21 @@ bool init_fmod() {
 	//Create system
 	_result = FMOD::System_Create(&_system);
 	error_check(_result);
+
+
+	unsigned int version = 0;
+	_result = _system->getVersion(&version);
+	error_check(_result);
+
+	if (version < FMOD_VERSION)
+	{
+		fprintf(stderr, "FMOD lib version %08x doesn't match header version %08x", version, FMOD_VERSION);
+		exit(1);
+	}
+
+
 	//Init system
-	_result = _system->init(32, FMOD_INIT_NORMAL, 0);
+	_result = _system->init(32, FMOD_INIT_NORMAL, NULL);
 	error_check(_result);
 	
 	//create echo dsp
@@ -526,27 +447,26 @@ bool init_fmod() {
 	_result = _system->createDSPByType(FMOD_DSP_TYPE_TREMOLO, &_dsp_tremolo);
 	error_check(_result);
 
-	_result = _system->set3DSettings(1.0f, 1.0f, 1.0f);
+
+	_result = _dsp_echo->setBypass(true);
 	error_check(_result);
 
-	//initialize our audio listener
-	_al = new AudioListener(_system);
+	_result = _dsp_tremolo->setBypass(true);
+	error_check(_result);
+
+	Sleep(1000);
+	//TODO: 3 INIT INPUT DEVICE
+
+
 
 	return true;
 }
 
 void release_fmod() {
 
+	//TODO: 7 Clean up
 
 
-	std::vector<AudioItem>::iterator it = _vec_audio_items.begin();
-	for (it; it != _vec_audio_items.end(); it++) {
-		
-		if (it->sound) {
-			_result = it->sound->release();
-			error_check(_result);
-		}
-	}
 
 	//release dsp
 	if (_dsp_echo) {
@@ -557,7 +477,6 @@ void release_fmod() {
 		_result = _dsp_tremolo->release();
 		error_check(_result);
 	}
-
 	
 	if (_system) {
 		_system->close();
@@ -567,48 +486,3 @@ void release_fmod() {
 
 }
 
-bool load_audio_from_file() {
-
-	std::ifstream input_file;
-	input_file.open("../common/assets/config/audio_files.txt");
-	if (!input_file) {
-		fprintf(stderr, "Unable to open audio_files.txt\n");
-		return false;
-	}
-	std::string line;
-	
-	
-	float x_position = -15.0f;
-
-	while (std::getline(input_file, line))
-	{
-		if (line.length() > 0) {
-			AudioItem ai(_system);
-			ai.path = line.c_str();
-			//ai.create_and_play_sound(true, true);
-			ai.create_and_play_3d_sound(false, x_position);
-			_vec_audio_items.push_back(ai);
-
-			x_position *= -1.0f;
-		}
-	}
-
-	_it_selected_autio_item = _vec_audio_items.begin();
-	
-	//ff sound at index 0 by 6 seconds or change the position
-	_result = _vec_audio_items.at(0).channel->setPosition(6000, FMOD_TIMEUNIT_MS);
-	error_check(_result);
-
-	////add a dsp to sound at index 0
-	//_result = _vec_audio_items.at(0).channel->addDSP(0, _dsp_echo);
-	//error_check(_result);
-	////add dsp to sound at index 1
-	//_result = _vec_audio_items.at(1).channel->addDSP(0, _dsp_tremolo);
-	//error_check(_result);
-
-
-
-	//TODO: EXERCISE IN CLASS USE A CHANNEL GROUP, TO MUTE, AND ADD A DSP INSTEAD.
-
-	return true;
-}
