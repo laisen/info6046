@@ -33,25 +33,26 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H  
 
-//TODO: 1 Define constants
-#define INPUT_DEVICE_INDEX 0
+//TODO1: DEFINE CONSTANTS
+const int  STRING_BUFFER_SIZE = 255;
+
 
 //Globals
 unsigned int _vertex_shader, _fragment_shader, _program;
 GLfloat _current_y_position = 0.0f;
 GLfloat _y_offset = 40.0f;
-char _text_buffer[512];
+char _text_buffer[STRING_BUFFER_SIZE];
 
 
 
 
-//TODO: 2 GLOBALS
+
 
 
 
 //GLFW
 int _window_width = 640;
-int _window_height = 480;
+int _window_h_eight = 480;
 GLFWwindow* _main_window = NULL;
 
 //Free text
@@ -69,6 +70,10 @@ FMOD_RESULT _result = FMOD_OK;
 FMOD::DSP* _dsp_echo = 0;
 FMOD::DSP* _dsp_tremolo = 0;
 bool _is_dsp_on = false;
+
+//TODO2: FMOD NET STREAM SPECIFICS
+
+
 
 //=============================================================
 struct point {
@@ -89,8 +94,6 @@ void render_text(const char* text);
 bool init_fmod();
 void release_fmod();
 
-
-//TODO: 4 handle recorded sound
 
 void error_check(FMOD_RESULT result) {
 	if (result != FMOD_OK) {
@@ -113,23 +116,14 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
 		glfwSetWindowShouldClose(window, GLFW_TRUE);
 	}
+	else if (key == GLFW_KEY_P && action == GLFW_PRESS) {
+		//TODO11: PAUSE/RESUME
 
-	//TODO: 6 INCREATE/DECREASE PLAYBACK RATE
-
-			
-
-
+	}
 }
-
-//TODO: 4  DEFINE handle_recording_sound
-
-
-
 
 
 int main() {
-
-
 
 	fprintf(stdout, "Init opengl ...\n");
 	assert(init_gl());
@@ -159,27 +153,37 @@ int main() {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
-
+		//TODO10: RENDER SOUND INFORMATION
 		render_text("=====================================================");
-		render_text("Media Fundamentals record sound...");
+		render_text("Media Fundamentals stream from the internet...");
 		render_text("=====================================================");
 		render_text("Press ESC to Exit!");
 		render_text("");
-		//TODO:  show is recording
 
 		render_text("=====================================================");
 
-		
-		//TODO: 5 call handle_recording_sound
-
-
+		//IMPORTANT: call system update.		
 		_result = _system->update();
 		error_check(_result);
+
+		//TODO6: Get sound open state
+
+		
+		//TODO7:Read tags (Optional)
+
+		
+		//TODO8: GET OPEN SATE DESCRIPTION
+
+
+		//TODO9: get channel info or play sound
+
 
 		glfwSwapBuffers(_main_window);
 		glfwPollEvents();
 
-		glfwGetWindowSize(_main_window, &_window_width, &_window_height);
+		glfwGetWindowSize(_main_window, &_window_width, &_window_h_eight);
+
+		Sleep(50);
 
 	}
 
@@ -203,7 +207,7 @@ bool init_gl() {
 		
 	//Full screen
 	//_main_window = glfwCreateWindow(1920, 1080, "Media Fundamentals... play sound", glfwGetPrimaryMonitor(), NULL);
-	_main_window = glfwCreateWindow(1920, 1080, "Media Fundamentals... play sound", NULL, NULL);
+	_main_window = glfwCreateWindow(1920, 1080, "Media Fundamentals... stream from the internet sound", NULL, NULL);
 
 	if (!_main_window)
 	{
@@ -212,7 +216,7 @@ bool init_gl() {
 		return false;
 	}
 	
-	glfwGetWindowSize(_main_window, &_window_width, &_window_height);
+	glfwGetWindowSize(_main_window, &_window_width, &_window_h_eight);
 
 	glfwSetKeyCallback(_main_window, key_callback);
 	glfwMakeContextCurrent(_main_window);
@@ -234,7 +238,8 @@ bool init_gl() {
 
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-	glClearColor(0.7f, 0.7f, 0.7f, 1.0f);
+	//glClearColor(0.7f, 0.7f, 0.7f, 1.0f);
+	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 
 	return true;
 }
@@ -333,7 +338,7 @@ bool init_shaders() {
 void render_text(const char *text) {
 	//render_text(const char *text, float x, float y, float sx, float sy)
 	float sx = 2.0f / _window_width;
-	float sy = 2.0f / _window_height;
+	float sy = 2.0f / _window_h_eight;
 	
 	//GLfloat _current_y_position = 30.0f;
 	GLfloat xoffset = 8 * sx;
@@ -436,7 +441,8 @@ bool init_fmod() {
 
 
 	//Init system
-	_result = _system->init(32, FMOD_INIT_NORMAL, NULL);
+	_result = _system->init(1, FMOD_INIT_NORMAL, &_ei);
+	
 	error_check(_result);
 	
 	//create echo dsp
@@ -454,9 +460,12 @@ bool init_fmod() {
 	_result = _dsp_tremolo->setBypass(true);
 	error_check(_result);
 
-	Sleep(1000);
-	//TODO: 3 INIT INPUT DEVICE
-
+	//TODO3: Set the default file buffer size for newly opened streams.
+		
+	//TODO4: Initialize extended information
+		
+	//TODO5: create sound
+	
 
 
 	return true;
@@ -464,8 +473,16 @@ bool init_fmod() {
 
 void release_fmod() {
 
-	//TODO: 7 Clean up
+	
+	//TODO: Clean up
 
+	//TODO: Stop channel
+	
+
+	//TODO: wait for sound to finish before releasing
+	
+
+	//TODO: Release sound
 
 
 	//release dsp
